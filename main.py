@@ -40,7 +40,7 @@ def listing_category(url_category):
     category = []
     links = []
     response = requests.get(url_category)
-    # Si Page Ok => On continue
+# Si Page Ok => On continue
     if response.ok:
         category.append(url_category)
         category_base = url_category.replace("index.html", "")
