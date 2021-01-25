@@ -17,10 +17,10 @@ def books(url_produit):
     # Si Page Ok => On continue
     if response.ok:
         soup = BeautifulSoup(response.content, 'lxml')
-        contenu = soup.find_all("table")[0].find_all("td")
+        contenus = soup.find_all("table")[0].find_all("td")
 
-        for cont in contenu:  # Parcours du tableau Information et ajout des infos dans la list info.
-            info.append(cont.text)
+        for contenu in contenus:  # Parcours du tableau Information et ajout des infos dans la list info.
+            info.append(contenu.text)
 
         return {
             "productpage_url": url_produit,
@@ -38,7 +38,7 @@ def books(url_produit):
         }
 
 
-def listing_category(url_category):
+def books_url(url_category):
     category = []
     links = []
     response = requests.get(url_category)
@@ -71,7 +71,7 @@ def listing_category(url_category):
 
 
 def csv_writer(data):
-    with open(csv_path + 'book.csv', 'w', newline='', encoding='utf-8-sig') as csvfile:
+    with open(csv_path + data[0]['category'] + '.csv', 'w', newline='', encoding='utf-8-sig') as csvfile:
         fieldnames = ['productpage_url', 'upc', 'title', 'price_including_tax',  'price_excluding_tax',
                       'number_available', 'product_description', 'category', 'review_rating', 'image_url']
         try:
@@ -85,7 +85,7 @@ def csv_writer(data):
 
 def scrap():
     infos = []
-    livres = listing_category(url)
+    livres = books_url(url)
 
     for livre in livres:
         infos.append(books(livre))
@@ -94,7 +94,8 @@ def scrap():
         csv_writer(infos)
         print("Toutes les données sont récupérées")
     except Warning:
-        print("Une erreur c'est produite lors de l'ecriture du fichier CSV")
+        print("Une erreur c'est produite lors de l'écriture du fichier CSV")
+
 
 
 if __name__ == '__main__':
