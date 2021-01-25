@@ -7,8 +7,8 @@ from bs4 import BeautifulSoup
 csv_path = "extract/"
 url_base = 'http://books.toscrape.com/'
 # url = 'http://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html'
-url = 'http://books.toscrape.com/catalogue/category/books/mystery_3/index.html'
-# url = 'http://books.toscrape.com/catalogue/category/books/travel_2/index.html'
+# url = 'http://books.toscrape.com/catalogue/category/books/mystery_3/index.html'
+url = 'http://books.toscrape.com/catalogue/category/books/travel_2/index.html'
 
 
 def books(url_produit):
@@ -70,22 +70,33 @@ def listing_category(url_category):
     return links
 
 
-def csv_writer(dict):
+def csv_writer(data):
     with open(csv_path + 'book.csv', 'w', newline='', encoding='utf-8-sig') as csvfile:
         fieldnames = ['productpage_url', 'upc', 'title', 'price_including_tax',  'price_excluding_tax',
                       'number_available', 'product_description', 'category', 'review_rating', 'image_url']
-        #TODO Gerer exception si un champ du dictionnaire est inconny
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames) #, restval='', extrasaction='raise')
-        writer.writeheader()
-        writer.writerows(dict)
+        try:
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames, restval='', extrasaction='raise')
+            writer.writeheader()
+            writer.writerows(data)
+        except ValueError as err:
+            print("Echec extraction CSV : Un champ inconnu est présent => " + str(err))
+            raise Warning
+
+
+def scrap():
+    infos = []
+    livres = listing_category(url)
+
+    for livre in livres:
+        infos.append(books(livre))
+
+    try:
+        csv_writer(infos)
+        print("Toutes les données sont récupérées")
+    except Warning:
+        print("Une erreur c'est produite lors de l'ecriture du fichier CSV")
 
 
 if __name__ == '__main__':
-    infos = []
-    livres = listing_category(url)
-    for livre in livres:
-        infos.append(books(livre))
-        # print(infos)
-    # print("Nombres de livres : " + str(len(infos)))
-    csv_writer(infos)
-    print("Fini")
+    scrap()
+
