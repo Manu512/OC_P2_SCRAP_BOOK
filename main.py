@@ -31,7 +31,7 @@ def books(url_produit):
             "price_excluding_tax": info[2],
             "number_available": re.search("\d.", info[5]).group(),
             "product_description": soup.select("#product_description ~ p")[0].text,
-            "category": info[1],
+            "category": soup.find("ul",class_='breadcrumb').find_all("a")[2].text,
             # Information N° etoile
             "review_rating": soup.find_all("p", class_="star-rating")[0].attrs['class'][1],
             "image_url": url_base + soup.select("div.item.active")[0].img.attrs["src"].replace("../../", "")
@@ -100,4 +100,5 @@ def scrap():
 
 if __name__ == '__main__':
     scrap()
+
 
