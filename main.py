@@ -1,17 +1,16 @@
 # coding: utf8
+import logging
 import requests
 import re
 import csv
 from bs4 import BeautifulSoup
 
+logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%d/%m/%Y %H:%M:%S', level=logging.INFO)
 csv_path = "extract/"
 url_base = 'http://books.toscrape.com/'
-# url = 'http://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html'
-# url = 'http://books.toscrape.com/catalogue/category/books/mystery_3/index.html'
-url = 'http://books.toscrape.com/catalogue/category/books/travel_2/index.html'
 
 
-def books(url_produit):
+def retrieve_data_books(url_produit):
     info = []
     response = requests.get(url_produit)
     # Si Page Ok => On continue
@@ -22,6 +21,11 @@ def books(url_produit):
         for contenu in contenus:  # Parcours du tableau Information et ajout des infos dans la list info.
             info.append(contenu.text)
 
+        if soup.select("#product_description ~ p"):
+            description = soup.select("#product_description ~ p")[0].text
+        else:
+            description = ""
+
         return {
             "productpage_url": url_produit,
             "upc": info[0],
@@ -30,8 +34,8 @@ def books(url_produit):
             "price_including_tax": info[3],
             "price_excluding_tax": info[2],
             "number_available": re.search("\d.", info[5]).group(),
-            "product_description": soup.select("#product_description ~ p")[0].text,
-            "category": soup.find("ul",class_='breadcrumb').find_all("a")[2].text,
+            "product_description": description,
+            "category": soup.find("ul", class_='breadcrumb').find_all("a")[2].text,
             # Information N° etoile
             "review_rating": soup.find_all("p", class_="star-rating")[0].attrs['class'][1],
             "image_url": url_base + soup.select("div.item.active")[0].img.attrs["src"].replace("../../", "")
@@ -70,8 +74,21 @@ def books_url(url_category):
     return links
 
 
-def csv_writer(data):
-    with open(csv_path + data[0]['category'] + '.csv', 'w', newline='', encoding='utf-8-sig') as csvfile:
+def listing_category(url):
+    cat = {}
+    response = requests.get(url)
+    if response.ok:
+        soup = BeautifulSoup(response.content, 'lxml')
+        categories = soup.find('ul', class_='nav').find('ul').find_all('li')
+
+        for categorie in categories:
+            cat[categorie.a.text.split()[0]] = (categorie.a['href'])
+
+    return cat
+
+
+def csv_writer(data, categorie):
+    with open(csv_path + categorie + '.csv', 'w', newline='', encoding='utf-8-sig') as csvfile:
         fieldnames = ['productpage_url', 'upc', 'title', 'price_including_tax',  'price_excluding_tax',
                       'number_available', 'product_description', 'category', 'review_rating', 'image_url']
         try:
@@ -79,26 +96,34 @@ def csv_writer(data):
             writer.writeheader()
             writer.writerows(data)
         except ValueError as err:
-            print("Echec extraction CSV : Un champ inconnu est présent => " + str(err))
+            logging.info("Echec extraction CSV : Un champ inconnu est présent => " + str(err))
             raise Warning
 
 
-def scrap():
-    infos = []
-    livres = books_url(url)
+def define_url_to_scrap(url_base):
 
-    for livre in livres:
-        infos.append(books(livre))
+    collections = {}
+    categorys = listing_category(url_base)  # On récolte la liste des categories
+    logging.info('Categorie : Pass')
+    for category in categorys.items():
+        collections[category[0]] = books_url(url_base + category[1])  # On récolte les liens de tous les livres
+        logging.info(f'Récupération de la categorie {category[0]} situé à {url_base + category[1]!r} : Fait')
 
-    try:
-        csv_writer(infos)
-        print("Toutes les données sont récupérées")
-    except Warning:
-        print("Une erreur c'est produite lors de l'écriture du fichier CSV")
-
+    return collections
 
 
 if __name__ == '__main__':
-    scrap()
 
+    logging.info('Lancement Scrap')
+    dict = define_url_to_scrap(url_base)
 
+    for categorie in dict.keys():
+        data = []
+        for book in dict[categorie]:
+            #  logging.info(f'Récupération informations du livre {book!r} de la categorie {categorie!r}: En cours')
+            data.append(retrieve_data_books(book))
+        try:
+            csv_writer(data, categorie)
+            logging.info(f'Tous les livres de la categorie {categorie!r} sont récupérés')
+        except Warning:
+            logging.info("Une erreur c'est produite lors de l'écriture du fichier CSV")
