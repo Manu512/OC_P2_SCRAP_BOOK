@@ -6,7 +6,7 @@ import csv
 import os
 #  import shutil
 from bs4 import BeautifulSoup
-
+from multiprocessing import Pool
 
 logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%d/%m/%Y %H:%M:%S', level=logging.INFO)
 csv_path = "extract/"
@@ -151,19 +151,19 @@ def main():
     for categorie in dict.keys():
         data = []
         for book in dict[categorie]:
-            logging.info(f'Récupération informations du livre {book!r} de la categorie {categorie!r}: En cours')
+            #logging.info(f'Récupération informations du livre {book!r} de la categorie {categorie!r}: En cours')
             data.append(retrieve_data_books(book))
             img_all.append(data[-1]['image_url'])
      # On envoie les données de la categorie dans la fonction de stockage des données en CSV.
-            try:
-                csv_writer(data, categorie)
-                logging.info(f'Tous les livres de la categorie {categorie!r} sont récupérés')
-            except Warning:
-                logging.info("Une erreur c'est produite lors de l'écriture du fichier CSV")
+        try:
+            csv_writer(data, categorie)
+            logging.info(f'Tous les livres de la categorie {categorie!r} sont récupérés')
+        except Warning:
+            logging.info("Une erreur c'est produite lors de l'écriture du fichier CSV")
 
-    for img in img_all:
-        extract_book_picture(img)
-
+    logging.info("Récupération des images")
+    p = Pool(20)
+    p.map(extract_book_picture,img_all)
 
 if __name__ == '__main__':
     main()
