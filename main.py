@@ -3,7 +3,8 @@ import logging
 import requests
 import re
 import csv
-import os, shutil
+import os
+#  import shutil
 from bs4 import BeautifulSoup
 
 
@@ -25,11 +26,10 @@ def init():
 def retrieve_data_books(url_produit):
     info = []
     response = requests.get(url_produit)
-# Si la page est chargé, on recupere les informations.
+# Si la page est chargé, on récupère les informations.
     if response.ok:
         soup = BeautifulSoup(response.content, 'lxml')
         img = url_base + soup.select("div.item.active")[0].img.attrs["src"].replace("../../", "")
-        extract_book_picture(soup.find("img")['src'].replace("../../",url_base), img )
         contenus = soup.find_all("table")[0].find_all("td")
         # Parcours du tableau Information et ajout des infos dans la list info.
         for contenu in contenus:
@@ -70,15 +70,6 @@ def retrieve_data_books(url_produit):
         }
 
 
-def extract_book_picture(jpg_url, name):
-    response = requests.get(jpg_url)
-    if response.ok:
-        with open(image_path + name.split('/')[-1] , 'wb') as handle:
-            handle.write(response.content)
-    else:
-        logging.info("Erreur de récupération de l'image :" + jpg_url)
-
-
 def define_books_url(url_category):
     category = []
     links = []
@@ -113,9 +104,9 @@ def listing_category(url):
     response = requests.get(url)
     if response.ok:
         soup = BeautifulSoup(response.content, 'lxml')
-        categories = soup.find('ul', class_='nav').find('ul').find_all('li')
+        categories = soup.find('ul', class_='nav-list').find('ul').find_all('a')
         for categorie in categories:
-            cat[categorie.a.text.split()[0]] = (categorie.a['href'])
+            cat[categorie.text.strip().replace(" ","_")] = categorie['href']
     return cat
 
 
@@ -143,19 +134,36 @@ def define_url_to_scrap(url_base):
     return collections
 
 
-if __name__ == '__main__':
+def extract_book_picture(jpg_url):
+    response = requests.get(jpg_url)
+    if response.ok:
+        with open(image_path + jpg_url.split('/')[-1], 'wb') as handle:
+            handle.write(response.content)
+    else:
+        logging.info("Erreur de récupération de l'image :" + jpg_url)
+
+
+def main():
     init()
     logging.info('Lancement Scrap')
     dict = define_url_to_scrap(url_base)
-
+    img_all = []
     for categorie in dict.keys():
         data = []
         for book in dict[categorie]:
-#  logging.info(f'Récupération informations du livre {book!r} de la categorie {categorie!r}: En cours')
+            logging.info(f'Récupération informations du livre {book!r} de la categorie {categorie!r}: En cours')
             data.append(retrieve_data_books(book))
-#  On envoie les données de la categorie dans la fonction de stockage des données en CSV.
-        try:
-            csv_writer(data, categorie)
-            logging.info(f'Tous les livres de la categorie {categorie!r} sont récupérés')
-        except Warning:
-            logging.info("Une erreur c'est produite lors de l'écriture du fichier CSV")
+            img_all.append(data[-1]['image_url'])
+    #  On envoie les données de la categorie dans la fonction de stockage des données en CSV.
+    #         try:
+    #             csv_writer(data, categorie)
+    #             logging.info(f'Tous les livres de la categorie {categorie!r} sont récupérés')
+    #         except Warning:
+    #             logging.info("Une erreur c'est produite lors de l'écriture du fichier CSV")
+
+    for img in img_all:
+        extract_book_picture(img)
+
+
+if __name__ == '__main__':
+    main()
