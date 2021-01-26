@@ -1,14 +1,34 @@
-# **Books Scrap**
+# __Books Scrap Projet P2__
 
-## Branch Produit
-1° Iteration du code permettant de récupérer les informations sur la page Produit.
+## Prérequis
+Une installation de Python 3.3 minimum pour pouvoir créer l'environnement virtuel avec cette méthode.
 
-## Branch Category
-2° Iteration du code permettant de récupérer les livres d'une catégorie puis de l'envoyer vers la fonction 'Produit' 
-puis d'écrire les informations dans un fichier CSV.
+## Installation environnement virtuel
+Se diriger sur le repertoire ou l'on souhaite installer l'environnement virtuel.
+Executer la commande :
+* `python3 -m venv 'env'` ('env' sera le repertoire où seront stocké les données de l'environnement 
+python)
 
-## Branch Global
-3° Iteration du code. Creation de la fonction permettant de récupérer la liste des catégories. Puis on génère un 
-fichier CSV par catégorie.
+## Activation et installations des dépendances nécessaires au script dans l'environnement virtuel
+###Sous Windows les commandes à executer :
+* `env/Script/activate`
+* `pip install -r requirements.txt`
 
-## Branch Main
+###Sous Linux les commandes à executer : 
+* `source env/bin/activate`
+* `pip install -r requirements.txt`
+
+###Installation dependances manuellement :
+* `pip install beautifulsoup4~=4.9.1 requests~=2.25.1 lxml==4.6.2` 
+
+##Execution du code d'application
+
+* `python3 main.py`
+
+##Résultat
+
+Le résultat du scraping sera stocké dans un sous-repertoire 'extract' et les images des livres seront stocké 
+dans 'extract/images/'
+
+Chaque image extraite sera nommée en fonction de son nom de fichier. On le retrouvera dans la derniere colonne 
+du fichier catégorie.csv  
