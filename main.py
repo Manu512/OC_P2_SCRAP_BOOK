@@ -3,11 +3,22 @@ import logging
 import requests
 import re
 import csv
+import os, shutil
 from bs4 import BeautifulSoup
+import asyncio
+
 
 logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%d/%m/%Y %H:%M:%S', level=logging.INFO)
 csv_path = "extract/"
+image_path = "extract/images/"
 url_base = 'http://books.toscrape.com/'
+#url = 'http://books.toscrape.com/catalogue/chase-me-paris-nights-2_977/index.html'
+
+
+def init():
+    p = os.path.dirname(os.path.realpath(__file__))
+    # shutil.rmtree(p + '\\' + csv_path.replace('/',''),  ignore_errors=True)
+    os.makedirs(p + "\\" + image_path)
 
 
 def retrieve_data_books(url_produit):
@@ -16,6 +27,8 @@ def retrieve_data_books(url_produit):
     # Si Page Ok => On continue
     if response.ok:
         soup = BeautifulSoup(response.content, 'lxml')
+        img = url_base + soup.select("div.item.active")[0].img.attrs["src"].replace("../../", "")
+        asyncio.run(extract_book_picture(soup.find("img")['src'].replace("../../",url_base), img ))
         contenus = soup.find_all("table")[0].find_all("td")
 
         for contenu in contenus:  # Parcours du tableau Information et ajout des infos dans la list info.
@@ -38,11 +51,18 @@ def retrieve_data_books(url_produit):
             "category": soup.find("ul", class_='breadcrumb').find_all("a")[2].text,
             # Information N° etoile
             "review_rating": soup.find_all("p", class_="star-rating")[0].attrs['class'][1],
-            "image_url": url_base + soup.select("div.item.active")[0].img.attrs["src"].replace("../../", "")
+            "image_url": img
         }
 
+async def extract_book_picture(jpg_url, name):
+        response = requests.get(jpg_url)
+        if response.ok:
+            with open(image_path + name.split('/')[-1] , 'wb') as handle:
+                handle.write(response.content)
 
-def books_url(url_category):
+
+
+def define_books_url(url_category):
     category = []
     links = []
     response = requests.get(url_category)
@@ -101,19 +121,19 @@ def csv_writer(data, categorie):
 
 
 def define_url_to_scrap(url_base):
-
     collections = {}
     categorys = listing_category(url_base)  # On récolte la liste des categories
     logging.info('Categorie : Pass')
     for category in categorys.items():
-        collections[category[0]] = books_url(url_base + category[1])  # On récolte les liens de tous les livres
-        logging.info(f'Récupération de la categorie {category[0]} situé à {url_base + category[1]!r} : Fait')
+        collections[category[0]] = define_books_url(url_base + category[1]) # On récolte les liens de
+        # tous les livres
+        logging.info(f'Récupération des liens de la categorie {category[0]} situé à {url_base + category[1]!r} : Fait')
 
     return collections
 
 
 if __name__ == '__main__':
-
+    init()
     logging.info('Lancement Scrap')
     dict = define_url_to_scrap(url_base)
 
