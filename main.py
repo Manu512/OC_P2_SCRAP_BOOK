@@ -23,9 +23,9 @@ def init():
         logging.info("Erreur : Le chemin " + p + "\\" + image_path + "ne peut pas etre crée :" + str(error))
 
 
-def retrieve_data_books(url_produit):
+def retrieve_data_books(url: str):
     info = []
-    response = requests.get(url_produit)
+    response = requests.get(url)
 # Si la page est chargé, on récupère les informations.
     if response.ok:
         soup = BeautifulSoup(response.content, 'lxml')
@@ -40,7 +40,7 @@ def retrieve_data_books(url_produit):
         else:
             description = ""
         return {
-            "productpage_url": url_produit,
+            "productpage_url": url,
             "upc": info[0],
             # Information Title
             "title": soup.find_all("div", class_="product_main")[0].h1.text,
@@ -54,9 +54,9 @@ def retrieve_data_books(url_produit):
             "image_url": img
         }
     else:
-        logging.info("Erreur de récupération sur l'url :" + url_produit)
+        logging.info("Erreur de récupération sur l'url :" + url)
         return {
-            "productpage_url": url_produit,
+            "productpage_url": url,
             "upc": "",
             "title": "",
             "price_including_tax": "",
@@ -70,7 +70,7 @@ def retrieve_data_books(url_produit):
         }
 
 
-def define_books_url(url_category):
+def define_books_url(url_category: str) -> list:
     category = []
     links = []
     response = requests.get(url_category)
@@ -99,18 +99,18 @@ def define_books_url(url_category):
     return links
 
 
-def listing_category(url):
+def listing_category(url: str) -> dict:
     cat = {}
     response = requests.get(url)
     if response.ok:
         soup = BeautifulSoup(response.content, 'lxml')
         categories = soup.find('ul', class_='nav-list').find('ul').find_all('a')
         for categorie in categories:
-            cat[categorie.text.strip().replace(" ","_")] = categorie['href']
+            cat[categorie.text.strip().replace(" ", "_")] = categorie['href']
     return cat
 
 
-def csv_writer(data, categorie):
+def csv_writer(data: list, categorie: str):
     with open(csv_path + categorie + '.csv', 'w', newline='', encoding='utf-8-sig') as csvfile:
         fieldnames = ['productpage_url', 'upc', 'title', 'price_including_tax',  'price_excluding_tax',
                       'number_available', 'product_description', 'category', 'review_rating', 'image_url']
@@ -123,18 +123,18 @@ def csv_writer(data, categorie):
             raise Warning
 
 
-def define_url_to_scrap(url_base):
+def define_url_to_scrap(url: str) -> dict:
     collections = {}
-    categorys = listing_category(url_base)  # On récupère la liste des categories
+    categorys = listing_category(url)  # On récupère la liste des categories
     logging.info('Categorie : Pass')
     for category in categorys.items():
-# On récolte les liens de tous les livres en parsant toutes les categories et en creant une list collections.
-        collections[category[0]] = define_books_url(url_base + category[1])
+        # On récolte les liens de tous les livres en parsant toutes les categories et en creant une list collections.
+        collections[category[0]] = define_books_url(url + category[1])
         logging.info(f'Récupération des liens de la categorie {category[0]} situé à {url_base + category[1]!r} : Fait')
     return collections
 
 
-def extract_book_picture(jpg_url):
+def extract_book_picture(jpg_url: str):
     response = requests.get(jpg_url)
     if response.ok:
         with open(image_path + jpg_url.split('/')[-1], 'wb') as handle:
@@ -146,15 +146,15 @@ def extract_book_picture(jpg_url):
 def main():
     init()
     logging.info('Lancement Scrap')
-    dict = define_url_to_scrap(url_base)
+    urls = define_url_to_scrap(url_base)
     img_all = []
-    for categorie in dict.keys():
+    for categorie in urls.keys():
         data = []
-        for book in dict[categorie]:
-            #logging.info(f'Récupération informations du livre {book!r} de la categorie {categorie!r}: En cours')
+        for book in urls[categorie]:
+            # logging.info(f'Récupération informations du livre {book!r} de la categorie {categorie!r}: En cours')
             data.append(retrieve_data_books(book))
             img_all.append(data[-1]['image_url'])
-     # On envoie les données de la categorie dans la fonction de stockage des données en CSV.
+    # On envoie les données de la categorie dans la fonction de stockage des données en CSV.
         try:
             csv_writer(data, categorie)
             logging.info(f'Tous les livres de la categorie {categorie!r} sont récupérés')
@@ -163,7 +163,8 @@ def main():
 
     logging.info("Récupération des images")
     p = Pool(20)
-    p.map(extract_book_picture,img_all)
+    p.map(extract_book_picture, img_all)
+
 
 if __name__ == '__main__':
     main()
